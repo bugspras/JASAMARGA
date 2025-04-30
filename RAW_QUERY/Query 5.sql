@@ -34,7 +34,5 @@ LEFT JOIN
   "EmployeeProfiles" ep ON e.id = ep.employee_id
 LEFT JOIN 
   "Educations" ed ON e.id = ed.employee_id
-WHERE 
-  e.id IN (1, 2)
 ORDER BY 
   e.id;
