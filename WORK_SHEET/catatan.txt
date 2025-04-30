@@ -1,0 +1,44 @@
+=== CATATAN PENGGUNAAN PROJECT ===
+
+📦 MENJALANKAN PROJECT
+----------------------------------------
+npm start
+  → Menjalankan server Express secara normal (produksi).
+
+npm run dev
+  → Menjalankan server dengan Nodemon (auto-restart saat ada perubahan file).
+
+🧪 TESTING
+----------------------------------------
+npm test
+  → Menjalankan unit test menggunakan Jest.
+
+🛠️ MIGRASI DATABASE
+----------------------------------------
+npm run migrate
+  → Menjalankan semua migrasi Sequelize (membuat struktur tabel).
+
+npm run migrate:undo
+  → Mengembalikan (rollback) migrasi terakhir.
+
+🌱 SEED DATABASE
+----------------------------------------
+npm run seed
+  → Memasukkan data awal/sample ke database dengan seeder.
+
+npm run seed:undo
+  → Menghapus semua data dari hasil seeder.
+
+🐳 DOCKER COMMANDS
+----------------------------------------
+npm run docker:up
+  → Menjalankan container Docker dari docker-compose.yml (background).
+
+npm run docker:down
+  → Mematikan dan menghapus container Docker.
+
+npm run docker:build
+  → Build ulang semua container + langsung menjalankan.
+
+npm run docker:logs
+  → Melihat log realtime dari semua container Docker.

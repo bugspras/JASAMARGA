@@ -1,0 +1,25 @@
+2025-04-30T06:57:12.460Z [ERROR]: Database connection failed: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string
+2025-04-30T07:29:43.528Z [ERROR]: Database connection failed: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string
+2025-04-30T07:33:43.936Z [ERROR]: Database connection failed: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string
+2025-04-30T07:36:43.134Z [ERROR]: Database connection failed: column "createdAt" of relation "Employees" contains null values
+2025-04-30T07:36:53.268Z [ERROR]: Database connection failed: column "createdAt" of relation "Employees" contains null values
+2025-04-30T07:37:46.530Z [ERROR]: Database connection failed: column "createdAt" of relation "Employees" contains null values
+2025-04-30T07:40:34.119Z [INFO]: Server running on port 3000
+2025-04-30T07:40:34.120Z [INFO]: Database connected!
+2025-04-30T07:40:45.350Z [ERROR]: Error getting all employees: column Employee.createdAt does not exist
+2025-04-30T07:41:01.660Z [ERROR]: Error generating employee report: column Employee.createdAt does not exist
+2025-04-30T07:41:27.061Z [ERROR]: Error generating employee report: column Employee.createdAt does not exist
+2025-04-30T07:41:31.719Z [ERROR]: Error getting employee with id 1: column Employee.createdAt does not exist
+2025-04-30T07:41:37.040Z [ERROR]: Error getting employee with id 1: column Employee.createdAt does not exist
+2025-04-30T07:43:43.427Z [ERROR]: Error getting employee with id 1: column Employee.createdAt does not exist
+2025-04-30T07:45:08.674Z [INFO]: Server running on port 3000
+2025-04-30T07:45:08.676Z [INFO]: Database connected!
+2025-04-30T07:45:20.548Z [INFO]: Server running on port 3000
+2025-04-30T07:45:20.551Z [INFO]: Database connected!
+2025-04-30T07:46:20.031Z [INFO]: Server running on port 3000
+2025-04-30T07:46:20.035Z [INFO]: Database connected!
+2025-04-30T07:46:25.719Z [ERROR]: Error getting all employees: EmployeeProfile is not associated to Employee!
+2025-04-30T07:46:27.569Z [ERROR]: Error getting all employees: EmployeeProfile is not associated to Employee!
+2025-04-30T07:46:33.630Z [ERROR]: Error:
+2025-04-30T07:47:06.729Z [INFO]: Server running on port 3000
+2025-04-30T07:47:06.732Z [INFO]: Database connected!
