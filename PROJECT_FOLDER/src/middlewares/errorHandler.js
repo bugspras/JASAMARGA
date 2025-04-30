@@ -1,10 +1,7 @@
-const { StatusCodes } = require('http-status-codes');
-const logger = require('../utils/logger');
-
 module.exports = (err, req, res, next) => {
-  logger.error('Error:', err.stack);
+  console.error(err.stack);
   
-  const statusCode = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
+  const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
   
   res.status(statusCode).json({

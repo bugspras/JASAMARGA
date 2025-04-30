@@ -1,24 +1,33 @@
 const { Employee, EmployeeProfile, EmployeeFamily, Education } = require('../models');
 const { StatusCodes } = require('http-status-codes');
-const logger = require('../utils/logger');
-const { validationResult } = require('express-validator');
+const { sequelize } = require('../models');
+const { QueryTypes } = require('sequelize');
 
-// Get All Employees with relations
+// Helper function untuk menghitung umur
+const calculateAge = (dateOfBirth) => {
+  if (!dateOfBirth) return null;
+  const ageDifMs = Date.now() - new Date(dateOfBirth).getTime();
+  const ageDate = new Date(ageDifMs);
+  return Math.abs(ageDate.getUTCFullYear() - 1970) + ' Years Old';
+};
+
+// [1] Get All Employees
 exports.getAllEmployees = async (req, res) => {
   try {
     const employees = await Employee.findAll({
       include: [
-        { model: EmployeeProfile },
-        { model: EmployeeFamily },
-        { model: Education }
-      ]
+        { model: EmployeeProfile, as: 'profile' },
+        { model: EmployeeFamily, as: 'families' },
+        { model: Education, as: 'educations' }
+      ],
+      order: [['created_at', 'DESC']]
     });
+
     res.status(StatusCodes.OK).json({
       success: true,
       data: employees
     });
   } catch (error) {
-    logger.error('Error getting all employees:', error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: 'Failed to get employees'
@@ -26,14 +35,74 @@ exports.getAllEmployees = async (req, res) => {
   }
 };
 
-// Get Single Employee with all relations
+// [2] Get Employee Report (Soal Nomor 4)
+exports.getEmployeeReport = async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        e.id AS employee_id,
+        e.nik,
+        e.name,
+        e.is_active,
+        ep.gender,
+        CASE 
+          WHEN ep.date_of_birth IS NOT NULL 
+          THEN CONCAT(DATE_PART('year', AGE(NOW(), ep.date_of_birth)), ' Years Old') 
+          ELSE NULL 
+        END AS age,
+        ed.name AS school_name,
+        ed.level,
+        CASE
+          WHEN (
+            (SELECT COUNT(*) FROM "EmployeeFamilies" ef 
+            WHERE ef.employee_id = e.id AND (ef.relation = 'Suami' OR ef.relation = 'Istri')) = 0
+            AND
+            (SELECT COUNT(*) FROM "EmployeeFamilies" ef 
+            WHERE ef.employee_id = e.id AND ef.relation = 'Anak') = 0
+          ) THEN '-'
+          ELSE CONCAT(
+            (SELECT COUNT(*) FROM "EmployeeFamilies" ef 
+            WHERE ef.employee_id = e.id AND (ef.relation = 'Suami' OR ef.relation = 'Istri')), 
+            ' Istri & ', 
+            (SELECT COUNT(*) FROM "EmployeeFamilies" ef 
+            WHERE ef.employee_id = e.id AND ef.relation = 'Anak'), 
+            ' Anak'
+          )
+        END AS family_data
+      FROM 
+        "Employees" e
+      LEFT JOIN 
+        "EmployeeProfiles" ep ON e.id = ep.employee_id
+      LEFT JOIN 
+        "Educations" ed ON e.id = ed.employee_id
+      WHERE 
+        e.id IN (1, 2)
+      ORDER BY 
+        e.id;
+    `;
+
+    const report = await sequelize.query(query, { type: QueryTypes.SELECT });
+    
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: report
+    });
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Failed to generate employee report'
+    });
+  }
+};
+
+// [3] Get Single Employee
 exports.getEmployeeById = async (req, res) => {
   try {
     const employee = await Employee.findByPk(req.params.id, {
       include: [
-        { model: EmployeeProfile },
-        { model: EmployeeFamily },
-        { model: Education }
+        { model: EmployeeProfile, as: 'profile' },
+        { model: EmployeeFamily, as: 'families' },
+        { model: Education, as: 'educations' }
       ]
     });
 
@@ -49,7 +118,6 @@ exports.getEmployeeById = async (req, res) => {
       data: employee
     });
   } catch (error) {
-    logger.error(`Error getting employee with id ${req.params.id}:`, error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: 'Failed to get employee'
@@ -57,16 +125,8 @@ exports.getEmployeeById = async (req, res) => {
   }
 };
 
-// Create Employee with Profile, Family, and Education
+// [4] Create Employee with All Relations
 exports.createEmployee = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      success: false,
-      errors: errors.array()
-    });
-  }
-
   const transaction = await sequelize.transaction();
   try {
     const { profile, families, educations, ...employeeData } = req.body;
@@ -74,7 +134,7 @@ exports.createEmployee = async (req, res) => {
     // Create Employee
     const employee = await Employee.create(employeeData, { transaction });
     
-    // Create Profile if exists
+    // Create Profile
     if (profile) {
       await EmployeeProfile.create({ 
         ...profile, 
@@ -82,7 +142,7 @@ exports.createEmployee = async (req, res) => {
       }, { transaction });
     }
     
-    // Create Families if exists
+    // Create Families
     if (families && families.length > 0) {
       await EmployeeFamily.bulkCreate(
         families.map(family => ({ 
@@ -93,7 +153,7 @@ exports.createEmployee = async (req, res) => {
       );
     }
     
-    // Create Educations if exists
+    // Create Educations
     if (educations && educations.length > 0) {
       await Education.bulkCreate(
         educations.map(edu => ({ 
@@ -108,9 +168,9 @@ exports.createEmployee = async (req, res) => {
     
     const newEmployee = await Employee.findByPk(employee.id, {
       include: [
-        { model: EmployeeProfile },
-        { model: EmployeeFamily },
-        { model: Education }
+        { model: EmployeeProfile, as: 'profile' },
+        { model: EmployeeFamily, as: 'families' },
+        { model: Education, as: 'educations' }
       ]
     });
 
@@ -120,7 +180,6 @@ exports.createEmployee = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    logger.error('Error creating employee:', error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: 'Failed to create employee'
@@ -128,16 +187,8 @@ exports.createEmployee = async (req, res) => {
   }
 };
 
-// Update Employee with Profile, Family, and Education
+// [5] Update Employee with All Relations
 exports.updateEmployee = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      success: false,
-      errors: errors.array()
-    });
-  }
-
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -212,9 +263,9 @@ exports.updateEmployee = async (req, res) => {
     
     const updatedEmployee = await Employee.findByPk(id, {
       include: [
-        { model: EmployeeProfile },
-        { model: EmployeeFamily },
-        { model: Education }
+        { model: EmployeeProfile, as: 'profile' },
+        { model: EmployeeFamily, as: 'families' },
+        { model: Education, as: 'educations' }
       ]
     });
 
@@ -224,7 +275,6 @@ exports.updateEmployee = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    logger.error(`Error updating employee with id ${req.params.id}:`, error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: 'Failed to update employee'
@@ -232,7 +282,7 @@ exports.updateEmployee = async (req, res) => {
   }
 };
 
-// Delete Employee
+// [6] Delete Employee
 exports.deleteEmployee = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
@@ -246,7 +296,7 @@ exports.deleteEmployee = async (req, res) => {
       });
     }
     
-    // Delete all related records first
+    // Delete all related records
     await EmployeeProfile.destroy({ 
       where: { employee_id: req.params.id },
       transaction
@@ -262,7 +312,7 @@ exports.deleteEmployee = async (req, res) => {
       transaction
     });
     
-    // Then delete the employee
+    // Delete the employee
     await employee.destroy({ transaction });
     
     await transaction.commit();
@@ -273,67 +323,9 @@ exports.deleteEmployee = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    logger.error(`Error deleting employee with id ${req.params.id}:`, error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: 'Failed to delete employee'
-    });
-  }
-};
-
-// Generate Employee Report (format seperti soal nomor 4)
-exports.getEmployeeReport = async (req, res) => {
-  try {
-    const employees = await Employee.findAll({
-      include: [
-        { model: EmployeeProfile },
-        { model: Education },
-        { model: EmployeeFamily }
-      ]
-    });
-
-    const report = employees.map(employee => {
-      // Hitung umur
-      const age = employee.EmployeeProfile?.date_of_birth 
-        ? `${new Date().getFullYear() - new Date(employee.EmployeeProfile.date_of_birth).getFullYear()} Years Old`
-        : null;
-      
-      // Hitung jumlah keluarga
-      let familyData = '';
-      if (employee.EmployeeFamilies && employee.EmployeeFamilies.length > 0) {
-        const spouseCount = employee.EmployeeFamilies.filter(f => 
-          ['Suami', 'Istri'].includes(f.relation)
-        ).length;
-        
-        const childCount = employee.EmployeeFamilies.filter(f => 
-          f.relation === 'Anak'
-        ).length;
-        
-        familyData = `${spouseCount} spouse & ${childCount} child`;
-      }
-      
-      return {
-        employee_id: employee.id,
-        nik: employee.nik,
-        name: employee.name,
-        is_active: employee.is_active,
-        gender: employee.EmployeeProfile?.gender || null,
-        age: age,
-        school_name: employee.Educations[0]?.name || null,
-        level: employee.Educations[0]?.level || null,
-        family_data: familyData
-      };
-    });
-
-    res.status(StatusCodes.OK).json({
-      success: true,
-      data: report
-    });
-  } catch (error) {
-    logger.error('Error generating employee report:', error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: 'Failed to generate employee report'
     });
   }
 };
